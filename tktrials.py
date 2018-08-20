@@ -3,7 +3,7 @@ from tkinter import ttk
 from tkinter import *
 from tkinter import filedialog
 import EPICscrape
-
+import datetime
 
 
 class Application(ttk.Frame):
@@ -20,25 +20,30 @@ class Application(ttk.Frame):
             """opens the designated file and checks if the pm_name
             field has changed if it has it writes the current cred"""
             try:
-                file= open('PM_contact.csv','r')
+                file= open('PM_contact.txt','r')
                 data = file.readlines()
                 file.close()
-                if (PM_name.get(),PM_email.get()) not in data:
-                    file = open("PM_contact.csv","w")
-                    file.write(PM_name.get()+'\n')
-                    file.write("Project Manager\n")
-                    file.write(PM_email.get()+'\n')
+                if (PM_name.get(),PM_phone.get(),PM_email.get()) not in data:
+                    file = open("PM_contact.txt","w")
+                    file.write(PM_name.get()+'\n'+PM_phone.get()+'\n'+PM_email.get())
                     file.close()
             except IOError:
-                file = open("PM_contact.csv", "w")
-                file.write(PM_name.get() + '\n')
-                file.write(PM_email.get() + '\n')
+                file = open("PM_contact.txt", "w")
+                file.write(PM_name.get() + '\n' + PM_phone.get() + '\n' + PM_email.get())
                 file.close()
+        def comment_period():
+            import datetime
+            frmtstrg='%m/%d/%Y'
+            startdate= datetime.datetime.strptime(FS1Date_start.get(),frmtstrg)
+            enddate= startdate+datetime.timedelta(30)
+
+
+            FS1Date_start= ttk.Entry(MidFrame)
 
         def get_vcp():
             if var1.get()==1:
                 checked()
-            rendered_search= EPICscrape.retrieve_EPIC_html(self.project.get())
+            rendered_search= EPICscrape.retrieve_EPIC_html(project.get())
             (self.EPIC_data, self.epic_street_address)= EPICscrape.return_all_EPIC_fields(rendered_search)
             self.project_ids= EPICscrape.format_IDs(self.EPIC_data)
             if var2.get()==0:
@@ -59,6 +64,7 @@ class Application(ttk.Frame):
             results.set(self.codify) #Fix the first bit, make the text wrap and get it saving coreectly and your dolden
             res_print.config(text=self.codify)
             save_button.config(state=NORMAL)
+            print('codify', self.codify)
 
         def draw_midframe(MidFrame,mylist):
             r = 1
@@ -87,18 +93,24 @@ class Application(ttk.Frame):
             if var2.get()==0:
                 if isinstance(object,EPICscrape.Fields):
                     object.set_id(self.project_ids[idx])
-                    object.set_contact_name(PM_name.get())
-                    object.set_contact_email(PM_email.get())
+                    object.set_contact_name(PM_name.get().strip())
+                    object.set_contact_phone(PM_phone.get().strip())
+                    object.set_contact_email(PM_email.get().strip())
+                    object.separate_BL()
                     return object
                 elif isinstance(object,EPICscrape.NoLibraryMatch):
                     object.set_id(self.project_ids[idx])
-                    object.set_contact_name(PM_name.get())
-                    object.set_contact_email(PM_email.get())
+                    object.set_contact_name(PM_name.get().strip())
+                    object.set_contact_phone(PM_phone.get().strip())
+                    object.set_contact_email(PM_email.get().strip())
+                    object.separate_BL()
                     return object
             else:
-                object.set_id(self.project.get().upper())
-                object.set_contact_email(PM_email.get())
-                object.set_contact_name(PM_name.get())
+                object.set_id(project.get().upper())
+                object.set_contact_name(PM_name.get().strip())
+                object.set_contact_phone(PM_phone.get().strip())
+                object.set_contact_email(PM_email.get().strip())
+                object.separate_BL()
                 return object
 
         def save():
@@ -124,42 +136,48 @@ class Application(ttk.Frame):
 
 
         TopFrame = ttk.Frame(master, borderwidth = 2,style="r.TFrame")
-        TopFrame.grid(row = 0, column = 0, rowspan = 3, columnspan = 4, sticky = W+E+N+S)
-        ttk.Label(TopFrame,text="Project Manager and their phone").grid(row=0,column=0, sticky=W+E+N+S)
-        ttk.Label(TopFrame,text="Project Manager email").grid(row=1,column=0, sticky=W+E+N+S)
-        ttk.Label(TopFrame,text="OER Project #").grid(row=3, column=0, sticky= W+N+E+S)
+        TopFrame.grid(row = 0, column = 0, rowspan=5,columnspan = 4, sticky = W+E+N+S)
+        ttk.Label(TopFrame,text="Project Manager").grid(row=0,column=0, sticky=W+E+N+S)
+        ttk.Label(TopFrame,text="Project Manager phone").grid(row=1,column=0, sticky=W+E+N+S)
+        ttk.Label(TopFrame,text="Project Manager email").grid(row=2,column=0, sticky=W+E+N+S)
+        ttk.Label(TopFrame,text="OER Project #").grid(row=4, column=0, sticky= W+N+E+S)
 
         #Entry Fields
-        PM_name = Entry(TopFrame, width=100)
+        PM_name = Entry(TopFrame, width=50)
         PM_name.grid(row=0,column=1,columnspan=5,sticky=W+E)
-        PM_email = Entry(TopFrame,width=100)
-        PM_email.grid(row=1, column=1, columnspan=3,sticky=W+E)
-        self.project= Entry(TopFrame, width=100)
-        self.project.grid(row=3,column=1, columnspan=2,sticky=W+E+N+S)
+        PM_phone = Entry(TopFrame, width=50)
+        PM_phone.grid(row=1,column=1,columnspan=5,sticky=W+E)
+        PM_email = Entry(TopFrame,width=50)
+        PM_email.grid(row=2, column=1, columnspan=3,sticky=W+E)
+        project= Entry(TopFrame, width=50)
+        project.grid(row=4,column=1, columnspan=2,sticky=W+E+N+S)
 
 
         # try filling Entrys from stored info
         try:
-            file = open("PM_contact.csv",'r')
+            file = open("PM_contact.txt",'r')
             user_em = file.readlines()
             file.close()
-            PM_name.insert(0,user_em[0])
-            PM_email.insert(0,user_em[1])
+            memorized_auth=user_em
+            PM_name.insert(0,memorized_auth[0])
+            PM_phone.insert(0,memorized_auth[1])
+            PM_email.insert(0,memorized_auth[2])
         except IOError:
-            PM_name.insert(0,"Captain Planet at 212-788-7527")
+            PM_name.insert(0,"Captain Planet")
+            PM_phone.insert(0,"212-788-7527")
             PM_email.insert(0,"cplanet@nyc.oer.gov")
 
         # Remember Me box
         var1= IntVar()
         chk= ttk.Checkbutton(TopFrame,text= "Remember Me",variable=var1, style="lg.TCheckbutton")
-        chk.grid(row=2,column=1,columnspan=3)
+        chk.grid(row=3,column=1,columnspan=3)
 
 
         self.Go= ttk.Button(TopFrame,text="Go",command=get_vcp)
-        self.Go.grid(row=4,column=1,columnspan=3,sticky=W+E+N+S)
+        self.Go.grid(row=5,column=1,columnspan=3,sticky=W+E+N+S)
         var2=IntVar()
         GoFast= ttk.Checkbutton(TopFrame,text="Use this number in my recipients list",variable=var2,style="lg.TCheckbutton")
-        GoFast.grid(row=4,column=0,sticky=W+E+N+S)
+        GoFast.grid(row=5,column=0,sticky=W+E+N+S)
         #the number of buttons will need to be  created (with a for i in range (len_project_id_list))
         #use lambda function?
         #once clicked, these buttons will place that value in EPICscrape's first codify field
@@ -174,6 +192,7 @@ class Application(ttk.Frame):
         BottomFrame.grid(row=5,column=0,rowspan=2,columnspan=4,sticky=N+S+E+W)
         results_label=ttk.Label(BottomFrame, text="Here are your results:")
         results_label.grid(row=0,column=0,sticky=N+E+W+S)
+
         res_print= ttk.Label(BottomFrame,textvariable=results,wraplength=300,justify=LEFT)
         res_print.grid(pady=5, row=1, column=0, columnspan=2, sticky=N + E + W + S)
 
@@ -183,7 +202,16 @@ class Application(ttk.Frame):
         save_button = ttk.Button(master,text="save", command=save,state=DISABLED)
         save_button.grid(row=last,column=2,sticky =N+W+E+S)
         ttk.Button(master,text="quit", command=master.quit).grid(row=last,column=3,sticky=N+E+W+S)
+        # Application.frame_fix(self,TopFrame.grid())
+        # Application.frame_fix(self,MidFrame.grid())
+        # Application.frame_fix(self,BottomFrame)
 
+    # def frame_fix(self,FrameObject):
+    #
+    #     for rows in FrameObject:
+    #         rows.rowconfigure(all,weight=1)
+    #     for cols in i:
+    #         cols.columnconfigure(all,weight=1)
 
         #not working, setting everything up before hand
 
@@ -207,5 +235,5 @@ entry error
 City, State creates a cell in csv formats ((just keep it separate.))
 add PM_email header
 create entry just for PM_phone
-should write just 
+
 """
