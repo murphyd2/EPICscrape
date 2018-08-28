@@ -16,6 +16,7 @@ class Application(ttk.Frame):
         self.project_ids=None
         self.codify= None
         self.v = IntVar()
+        self.usesameID=IntVar()
         def checked():
             """opens the designated file and checks if the pm_name
             field has changed if it has it writes the current cred"""
@@ -102,9 +103,11 @@ class Application(ttk.Frame):
 
         self.Go= ttk.Button(TopFrame,text="Go",command=get_vcp)
         self.Go.grid(row=5,column=1,columnspan=2,sticky=W+E+N+S)
-        self.var2=IntVar()
-        GoFast= ttk.Checkbutton(TopFrame,text="Use this number in my recipients list",variable=self.var2,style="lg.TCheckbutton")
+
+        GoFast= ttk.Checkbutton(TopFrame,text="Use this number in my recipients list",variable=self.usesameID,style="lg.TCheckbutton")
         GoFast.grid(row=5,column=0,sticky=W+E+N+S)
+
+
         def draw_results(f):
             TopFrame.destroy()
 
@@ -157,7 +160,7 @@ class Application(ttk.Frame):
         self.codify = EPICscrape.return_codify(self.EPIC_data, self.epic_street_address)
         x = self.v.get()
         repr(x)
-        self.codify = Application.final(self.codify, x)
+        self.codify = Application.final(self,self.codify, x)
         self.results.set(self.codify)  # Fix the first bit, make the text wrap and get it saving coreectly and your dolden
         self.res_print.config(text=self.codify)
         self.save_button.config(state=NORMAL)
@@ -166,7 +169,7 @@ class Application(ttk.Frame):
     def final(self, object, idx=None):
         # i'm gonna say that i did this for clarity but actually
         # i just started doing this before i realized it was unnecessary
-        if self.var2.get() == 0:
+        if self.usesameID.get() == 0:
             if isinstance(object, EPICscrape.Fields):
                 object.set_id(self.project_ids[idx])
                 object.set_contact_name(self.PM_name.get().strip())

@@ -1,24 +1,32 @@
 from tkinter import ttk
 from tkinter import *
 from tkinter import filedialog
+from tkinter import messagebox
+import sys
 import EPICscrape
 import time
+import csv
+class Contact():
+    def __init__(self,BoroPres,BoroPresAdr,BoroPresEmail,CCouncil,CCouncilAdr,CBNumber,CBAdr,CBDistMan,CBDistManEmail):
+        self.BoroPres=BoroPres
+        self.BoroPresAdr=None
+        self.BoroPresEmail=None
+        self.CCouncil=None
+        self.CCouncilAdr=None
+        self.CBNumber=None
+        self.CBAdr=None
+        self.CBDistMan=None
+        self.CBDistManEmail=None
+    def __setattr__(self, key, value):
+        self.key = value
+        return self.key
 
 class Win(ttk.Frame):
     def __init__(self, master=None):
         ttk.Frame.__init__(self, master)
         self.grid()
         self.Base = ttk.Frame(master).grid()
-        def FS1():
-            Win.draw_FS1(self)
-        def FS2():
-            Win.draw_FS2(self)
-        def FS3():
-            Win.draw_FS3(self)
-        def CL():
-            pass
-        def intfunc():
-            Win.draw_FS(self)
+
         Button1 = ttk.Button(master=self.Base,text= "click for Factsheet 1",command=self.draw_FS1)
         Button1.grid(row=0,column=0, sticky=N+E+W+S)
         Button2 = ttk.Button(master=self.Base,text= "click for Factsheet 2",command=self.draw_FS2)
@@ -32,6 +40,9 @@ class Win(ttk.Frame):
         linkLabel.configure("link.TLabel",foreground= 'blue')
         clicked = ttk.Style()
         clicked.configure("clickedlink.link.TLabel",foreground="purple3")
+
+        linkBtn =ttk.Style()
+        linkBtn.configure("link.TButton", foreground="blue", relief='sunken')
     def draw_FS1(self):
         IDS = ["15TMP060M", "16CVCP060M", "18TMP1339K"]
         Factsheet1_window= Toplevel()
@@ -136,9 +147,10 @@ class Win(ttk.Frame):
         BoroughPresidentvar = StringVar()
         CityCouncilvar = StringVar()
         NYCDCPvar = StringVar()
-        self.CB = IntVar()
-        CBadr=StringVar(value="Community Board %s Address" % self.CB.get())
-
+        self.CB = StringVar()
+        self.CBadr=StringVar()
+        self.CBDMName = StringVar()
+        self.CBDMEmail = StringVar()
         NYCityCC= """CityCouncil info goes here
          with email here
          yadda
@@ -151,32 +163,27 @@ class Win(ttk.Frame):
         self.EditStored = ttk.Label(ContactFrameCity, text="Am I out of date? Click here to change my stored values.",
                                style="link.TLabel")
         self.EditStored.bind('<Button-1>', self.ChangeStored)
+        #Calls to python Funcs
+        tt = (self.register(self.OpenCBsite),ContactFrameSS)
+        vcmd = (self.register(self.onValidate),'%s','%S')
+        rdctct = (self.register(self.LoadContacts),ContactFrameCity)
 
         CommunityBoardNUML = ttk.Label(ContactFrameSS, text="Community Board ##")
-        CommunityBoardADRL = ttk.Label(ContactFrameSS, textvariable=CBadr)
-        CommunityBoardDistrictManNL = ttk.Label(ContactFrameSS, text= ("Community Board " +str(self.CB.get())+" District Manager"))
-        CBDistrictManemailL = ttk.Label(ContactFrameSS, text= "CB {:2d} District Manager E-mail".format(self.CB.get()))
-        CommunityBoardHelp = ttk.Label(ContactFrameSS,text="Go to CB site",style="link.TLabel")
-        CommunityBoardHelp.bind(('<Button-1>', '<Return>'),self.OpenCBsite)
-        #Get CB info from NYCity? 1 brooklyn, 8 queens is format
+        CommunityBoardADRL = ttk.Label(ContactFrameSS, text="CB Address")
+        CommunityBoardDistrictManNL = ttk.Label(ContactFrameSS, text='CB District Manager')
+        CBDistrictManemailL = ttk.Label(ContactFrameSS, text="CB District Manager Email")
+        CommunityBoardHelp = ttk.Button(ContactFrameSS,text="Take me to the CB site",style="link.TButton", command=tt)
 
+        #Validation for Community Board
         #WIDGETS
         BoroughPresidentC = ttk.Combobox(ContactFrameCity, textvariable= BoroughPresidentvar,state='readonly')
         NYCDCP_C = ttk.Combobox(ContactFrameCity, textvariable= NYCDCPvar,state='readonly')
         CityCouncilT = Text(ContactFrameCity,width= 30, height= 10)
         CityCouncilT.insert(1.0, NYCityCC) #get City Council Info from NYCity
-
-
-        vcmd = (self.register(self.onValidate),'%S','%P')
-        self.CommunityBoardNUME = ttk.Entry(ContactFrameSS, textvariable=self.CB,validate='key',validatecommand=vcmd )
-
+        self.CommunityBoardNUME = ttk.Entry(ContactFrameSS, textvariable=self.CB, validate='key',validatecommand=vcmd )
         CommunityBoardADRE= ttk.Entry(ContactFrameSS)
         CommunityBoardDistrictManNE= ttk.Entry(ContactFrameSS)
         CBDistrictManEmailE= ttk.Entry(ContactFrameSS)
-
-
-
-
 
         #GRID
         ContactFrameCity.grid(row=0)
@@ -184,7 +191,6 @@ class Win(ttk.Frame):
         NYCDCP_L.grid(row=1)
         self.EditStored.grid(row=2)
         CityCouncilL.grid(row=3)
-
         BoroughPresidentC.grid(row=0, column=1)
         NYCDCP_C.grid(row=1,column=1)
         CityCouncilT.grid(row=3,column=1)
@@ -194,6 +200,7 @@ class Win(ttk.Frame):
         CommunityBoardADRL.grid(row=1)
         CommunityBoardDistrictManNL.grid(row=2)
         CBDistrictManemailL.grid(row=3)
+        CommunityBoardHelp.grid(row=4)
 
         self.CommunityBoardNUME.grid(row=0,column = 1)
         # ContactFrameSS.wait_variable(self.onValidate)
@@ -201,23 +208,67 @@ class Win(ttk.Frame):
         CommunityBoardDistrictManNE.grid(row=2,column=1)
         CBDistrictManEmailE.grid(row=3,column=1)
 
-        print('keys')
-    def onValidate(ContactFrameSS, new,combo):
+    def onValidate(ContactFrameSS, old,new):
         Check= True
         for ch in new:
             if ch.isdigit()!= True:
                 Check=False
         if Check==True:
             ContactFrameSS.CommunityBoardNUME.delete("0",'end')
-
-            ContactFrameSS.CB.set(combo)
+            ContactFrameSS.CommunityBoardNUME.insert("end",old+new)
         else:
             ContactFrameSS.CommunityBoardNUME.delete("0",'end')
         return Check
 
-    def OpenCBsite(self, Event):
-        pass
+    def OpenCBsite(ContactFrameSS,borough=None):
+        import pandas as pd
+        Borough =  'Brooklyn'#EPICscrape.Fields.borough
+        CBnumber= ContactFrameSS.CB.get()
+        try:
+            file='Community Board Websites.csv'
+            df = pd.read_csv(file,index_col=["rowidx"])
+            boroughcolumn= df["%s Community Boards" %Borough]
+            sitecolumn= df["%s Community Board Websites" %Borough]
+            ter= boroughcolumn.loc['row %s'%(int(CBnumber)-1)]
+            print("CB ##",ter)
+            astro= sitecolumn.loc['row %s'%(int(CBnumber)-1)]
+            print(astro)
+            #WORKS!
+            EPICscrape.CommunityBoard(astro)
+        except IOError as err:
+            messagebox.showerror("File not found","File {} was not found make sure its in the same path as {}".format(file,sys.path[0]))
+    def LoadContacts(ContactFrameCity):
+        try:
+            box = 'StoredContacts.csv'
+            with open(box, 'r') as f:
+                file = csv.DictReader(f, dialect='excel')
+                for row in file:
+                    if EPICscrape.Fields.borough in row[0]:
+                        ContactFrameCity.BoroughPresidentC.configure(values=str(row[0]+','+row[1]))
+        except IOError as err:
+            messagebox.showerror("File not found",
+                                 "File {} was not found."
+                                 " Make sure its in the same path (folder) as {}.".format(box,sys.path[0]))
+    def SetContact(ContactFrameCity,Event):
+        Event.widget.get()
+        box = 'StoredContacts.csv'
+        with open(box, 'r') as f:
+            file = csv.DictReader(f, dialect='excel')
+            for row in file:
+                if EPICscrape.Fields.borough in row[0]:
+                    Contact()
+                    ContactFrameCity.BoroughPresidentC.configure(values=str(row[0] + ',' + row[1]))
     def ChangeStored(self, Event):
+        try:
+            box='StoredContacts.csv'
+            with open(box,'r') as f:
+                file = csv.DictReader(f,dialect='excel')
+                for row in file:
+                    if EPICscrape.Fields.borough in row[0]:
+                        print(row)
+        except IOError as err:
+            messagebox.showerror("File not found",
+                                 "File {} was not found. Make sure its in the same path (folder) as {}.".format(box, sys.path[0]))
         print(Event.type)
         print("registered")
         Event.widget.configure(style="clickedlink.link.TLabel")

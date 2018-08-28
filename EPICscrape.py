@@ -174,7 +174,13 @@ def sam(address):
 
     innerHTML = browser.execute_script("return document.body.innerHTML") #returns the inner HTML as a string
     return innerHTML
-
+def CommunityBoard(url):
+    """Takes a user to the homepage of the site's Community Board
+    parameters:
+    url- passed by a DataFrame in the Contact List Window, stored in Community Board Websites.csv
+    returns nothing"""
+    browser= webdriver.Chrome()
+    browser.get(url)
 
 def B_Q_library_search(address_number, street, koq):
     """uses NYCity Map the address to get the zip code then uses the find nearest feature to find a nearby library
