@@ -13,57 +13,77 @@ from time import gmtime, strftime
 
 class Fields:
     "This Class is used to more easily reference specific information once it is pulled from EPIC and NYPL.org"
-    def __init__(self, number, name, borough, address, block_lot, project_class, month_year, library_adr, lib_phone,PmName,PmEmail):
+    def __init__(self, number, name, borough, address, block, lot, project_class, month_year, library_adr, lib_phone,PmName,PmPhone,PmEmail):
         self.number=number
         self.link_address  = name
         self.borough = borough
         self.address = address
-        self.block_lot = block_lot
+        self.block= block
+        self.lot= lot
         self.project_class = project_class
         self.month_year = month_year
         self.library_adr = library_adr
         self.library_ph =   lib_phone
         self.PmName=PmName
+        self.PmPhone= PmPhone
         self.PmEmail=PmEmail
 
     def __iter__(self):
         return self
 
     def __repr__(self):
-        return repr((self.number, self.link_address, self.borough, self.address, self.block_lot, self.project_class,
-                     self.month_year, self.library_adr, self.library_ph,self.PmName,self.PmEmail))
+        return repr((self.number, self.link_address, self.borough, self.address, self.block, self.lot, self.project_class,
+                     self.month_year, self.library_adr, self.library_ph,self.PmName,self.PmPhone,self.PmEmail))
     def set_id(self,string):
         self.number=string
         return self.number
+    def separate_BL(self):
+        split=self.block.split(',')
+        self.block=split[0]
+        self.lot=split[1]
+        return self.block,self.lot
     def set_contact_name(self,string):
         self.PmName=string
         return self.PmName
+    def set_contact_phone(self,string):
+        self.PmPhone=string
+        return self.PmPhone
     def set_contact_email(self,string):
         self.PmEmail=string
         return self.PmEmail
 
 class NoLibraryMatch:
     "This Class is used in case the library search fails"
-    def __init__(self, number, name, borough, address, block_lot, project_class, month_year,PmName,PmEmail):
+    def __init__(self, number, name, borough, address, block, lot, project_class, month_year,PmName,PmPhone,PmEmail):
         self.number= number
         self.link_address  = name
         self.borough = borough
         self.address = address
-        self.block_lot = block_lot
+        self.block= block
+        self.lot= lot
         self.project_class = project_class
         self.month_year = month_year
         self.PmName = PmName
+        self.PmPhone = PmPhone
         self.PmEmail = PmEmail
     def __repr__(self):
-        return repr((self.number, self.link_address, self.borough, self.address, self.block_lot, self.project_class,
-                     self.month_year,self.PmName,self.PmEmail))
+        return repr((self.number, self.link_address, self.borough, self.address, self.block, self.lot, self.project_class,
+                     self.month_year,self.PmName,self.PmPhone,self.PmEmail))
 
     def set_id(self,string):
         self.number=string
         return self.number
+    def separate_BL(self):
+        split=self.block.split(',')
+        self.block=split[0]
+        self.lot=split[1]
+        return self.block,self.lot
     def set_contact_name(self,string):
         self.PmName=string
         return self.PmName
+    def set_contact_phone(self,string):
+        self.PmPhone=string
+        return self.PmPhone
     def set_contact_email(self,string):
         self.PmEmail=string
         return self.PmEmail
@@ -154,7 +174,13 @@ def sam(address):
 
     innerHTML = browser.execute_script("return document.body.innerHTML") #returns the inner HTML as a string
     return innerHTML
-
+def CommunityBoard(url):
+    """Takes a user to the homepage of the site's Community Board
+    parameters:
+    url- passed by a DataFrame in the Contact List Window, stored in Community Board Websites.csv
+    returns nothing"""
+    browser= webdriver.Chrome()
+    browser.get(url)
 
 def B_Q_library_search(address_number, street, koq):
     """uses NYCity Map the address to get the zip code then uses the find nearest feature to find a nearby library
@@ -253,35 +279,58 @@ def B_Q_library_search(address_number, street, koq):
         text_elem.append(bkphone)
         browser.quit()
         return text_elem
-
-
 def WriteTo(object, outstring):
-    if isinstance(object,Fields)==True:
-        file= open(str(outstring),'w')
-        file.write(" VCP Number, Repository URL,Borough, Address, Block, Lot, Site Status,"
-                   " Month and Year, Library Address, Library Phone,PM Contact,\n")
-        for i in vars(object).values():
-            fieldlist= list(vars(object).values())
+    import csv
+    with open(str(outstring), 'w', newline='') as f:
+        if isinstance(object, Fields) == True:
+            file = csv.writer(f,dialect="excel")
+            headers="VCP Number, Repository URL,Borough, Address, Block, Lot, Site Status,Month and Year, Library Address, Library Phone,PM Contact, PM Phone, PM Email"
+            headers=headers.split(',')
+            file.writerow(headers)
 
-            if i != fieldlist[-1]:
-                file.write(str(i)+',')
-            else:
-                file.write(str(i))
-        file.close()
-        return "Done"
-    elif isinstance(object,NoLibraryMatch)==True:
-        file = open(str(outstring), 'w')
-        file.write(" VCP Number, Repository URL,Borough, Address, Block, Lot, Site Status,"
-                   " Month and Year,PM Contact,\n")
-        for i in vars(object).values():
             fieldlist = list(vars(object).values())
+            file.writerow(fieldlist)
+            f.close()
+            return "Done"
+        elif isinstance(object, NoLibraryMatch) == True:
+            file = csv.writer(f,dialect="excel")
+            headers=" VCP Number, Repository URL,Borough, Address, Block, Lot, " \
+                    "Site Status, Month and Year,PM Contact, PM Phone, PM Email"
+            headers=headers.split(',')
+            file.writerow(headers)
+            fieldlist = list(vars(object).values())
+            file.writerow(fieldlist)
+            f.close()
+            return "Done"
 
-            if i != fieldlist[-1]:
-                file.write(str(i) + ',')
-            else:
-                file.write(str(i))
-        file.close()
-        return "Done"
+def WriteTranslations(object, outstring):
+    import csv
+    with open(str(outstring), 'w', newline='') as f:
+        if isinstance(object, Fields) == True:
+            file = csv.writer(f, dialect="excel")
+            headers = "insert site address,name of local repository,insert site-specific url for RAWP," \
+                      "insert site-specific URL for translated CPS, mm/dd/yyyy RAWP comments are due, " \
+                      "insert mm/dd/yyyy that the cleanup will start," \
+                      "OER project manager name,OER project manager’s phone number," \
+                      "OER project manager name and phone number,OER project manager email address"
+            " VCP Number, Repository URL,Borough, Address, Block, Lot, " \
+            "Site Status, Month and Year,PM Contact, PM Phone, PM Email"
+            headers = headers.split(',')
+            file.writerow(headers)
+
+            fieldlist = list(vars(object).values())
+            file.writerow(fieldlist)
+            f.close()
+            return "Done"
+        elif isinstance(object, NoLibraryMatch) == True:
+            file = csv.writer(f, dialect="excel")
+            headers = " VCP Number, Repository URL,Borough, Address, Block, Lot, Site Status, Month and Year,PM Contact, PM Phone, PM Email"
+            headers = headers.split(',')
+            file.writerow(headers)
+            fieldlist = list(vars(object).values())
+            file.writerow(fieldlist)
+            f.close()
+            return "Done"
 
 def retrieve_EPIC_html(designation_number=None):
     query_page_base = "https://a002-epic.nyc.gov/app/search/results?query="  # 15CVCP060M goes here
@@ -332,8 +381,8 @@ def man_stat_bronx(data,ad):
         repository = 'https://a002-epic.nyc.gov' + str(data[1].find('a').get('href'))
         complete_adr = lib_name.strip().strip('\n')+ ' ' + stripped_adr
         codify = Fields(None, repository, data[2].get_text(), data[3].get_text(),
-                        data[4].get_text(), data[5].get_text(), strftime('%B %Y', gmtime()), complete_adr,
-                        lib_phone.strip('\n'),None,None)
+                        data[4].get_text(),None, data[5].get_text(), strftime('%B %Y', gmtime()), complete_adr,
+                        lib_phone.strip('\n'),None,None,None)
 
         return codify
     else:
@@ -352,8 +401,8 @@ def queens(data,ad):
         repository = 'https://a002-epic.nyc.gov' + str(data[1].find('a').get('href'))
 
         codify = Fields(None, repository, data[2].get_text(), data[3].get_text(),
-                        data[4].get_text(), data[5].get_text(), strftime('%B %Y', gmtime()), library_boo,
-                        library_address[-1],None,None)
+                        data[4].get_text(), None, data[5].get_text(), strftime('%B %Y', gmtime()), library_boo,
+                        library_address[-1],None,None,None)
         return codify
     else:
         raise ValueError("Could not find a nearby library for #: {} Street: {}".format(ad_number, ad_street))
@@ -371,8 +420,8 @@ def brooklyn(data,ad):
         repository = 'https://a002-epic.nyc.gov' + str(data[1].find('a').get('href'))
 
         codify = Fields(None, repository, data[2].get_text(), data[3].get_text(),
-                        data[4].get_text(), data[5].get_text(), strftime('%B %Y', gmtime()), library_boo,
-                        library_address[-1],None,None)
+                        data[4].get_text(), None, data[5].get_text(), strftime('%B %Y', gmtime()), library_boo,
+                        library_address[-1],None,None,None)
         return codify
     else:
         raise ValueError("Could not find a nearby library for #: {} Street: {}".format(ad_number,ad_street))
@@ -381,7 +430,7 @@ def no_libary_found(data,ad):
     repository = 'https://a002-epic.nyc.gov' + str(data[1].find('a').get('href'))
 
     codify = NoLibraryMatch(None, repository, data[2].get_text(), data[3].get_text(),
-                    data[4].get_text(), data[5].get_text(), strftime('%B %Y', gmtime()),None,None)
+                    data[4].get_text(), None, data[5].get_text(), strftime('%B %Y', gmtime()),None,None,None)
     return codify
 
 def return_codify(data,address_string):
